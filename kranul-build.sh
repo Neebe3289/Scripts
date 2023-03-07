@@ -24,14 +24,15 @@ Gcc64Path="${MainPath}/gcc64"
 Gcc32Path="${MainPath}/gcc32"
 AnyKernelPath="${MainPath}/anykernel"
 
-# Clone toolchain
+# Clone clang
 ClangPath=${MainClangPath}
 [[ "$(pwd)" != "${MainPath}" ]] && cd "${MainPath}"
-mkdir ${ClangPath}
-wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r450784e.tar.gz -O "aosp-clang.tar.gz"
-tar -xf aosp-clang.tar.gz -C ${ClangPath} && rm -rf aosp-clang.tar.gz
-git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9 -b lineage-19.1 ${Gcc64Path}
-git clone --depth=1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9 -b lineage-19.1 ${Gcc32Path}
+git clone --depth=1 https://gitlab.com/Neebe3289/prebuilts_clang_host_linux-x86_standalone.git -b clang-r450784e ${ClangPath}
+# Clone ggc
+mkdir ${Gcc64Path}
+mkdir ${Gcc32Path}
+git clone --depth=1 https://github.com/ArrowOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9 -b arrow-13.0 ${Gcc64Path}
+git clone --depth=1 https://github.com/ArrowOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9 -b arrow-13.0 ${Gcc32Path}
 
 # Toolchain setup
 export PATH="${ClangPath}/bin:${Gcc64Path}/bin:${Gcc32Path}/bin:${PATH}"
