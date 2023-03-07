@@ -27,7 +27,7 @@ AnyKernelPath="${MainPath}/anykernel"
 # Clone clang
 ClangPath=${MainClangPath}
 [[ "$(pwd)" != "${MainPath}" ]] && cd "${MainPath}"
-git clone --depth=1 https://gitlab.com/Neebe3289/prebuilts_clang_host_linux-x86_standalone.git -b clang-r450784e ${ClangPath}
+git clone --depth=1 https://gitlab.com/Neebe3289/prebuilts_clang_host_linux-x86_standalone.git -b clang-r487747 ${ClangPath}
 # Clone ggc
 mkdir ${Gcc64Path}
 mkdir ${Gcc32Path}
@@ -36,7 +36,7 @@ git clone --depth=1 https://github.com/ArrowOS/android_prebuilts_gcc_linux-x86_a
 
 # Toolchain setup
 export PATH="${ClangPath}/bin:${Gcc64Path}/bin:${Gcc32Path}/bin:${PATH}"
-export LD_LIBRARY_PATH="${ClangPath}/lib64:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="${ClangPath}/lib:${LD_LIBRARY_PATH}"
 export KBUILD_COMPILER_STRING="$(${ClangPath}/bin/clang --version | head -n 1)"
 
 # Enviromental variable
