@@ -110,8 +110,8 @@ make -j"$CORES" ARCH=arm64 O=out \
     LLVM=1 \
     LLVM_IAS=1 \
     CLANG_TRIPLE=aarch64-linux-gnu- \
-    CROSS_COMPILE=aarch64-linux-android- \
-    CROSS_COMPILE_COMPAT=arm-linux-androideabi- \
+    CROSS_COMPILE=aarch64-linux-gnu- \
+    CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
     2>&1 | tee "${BUILD_LOG}"
 
    if [[ -f "$IMAGE" ]]; then
