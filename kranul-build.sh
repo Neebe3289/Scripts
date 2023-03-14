@@ -20,22 +20,18 @@
 MainPath="$(pwd)"
 MainClangPath="${MainPath}/clang"
 ClangPath="${MainClangPath}"
-Gcc64Path="${MainPath}/gcc64"
-Gcc32Path="${MainPath}/gcc32"
 AnyKernelPath="${MainPath}/anykernel"
 
 # Clone clang
 ClangPath=${MainClangPath}
 [[ "$(pwd)" != "${MainPath}" ]] && cd "${MainPath}"
-git clone --depth=1 https://gitlab.com/Neebe3289/prebuilts_clang_host_linux-x86_standalone.git -b clang-r487747 ${ClangPath}
-# Clone ggc
-mkdir ${Gcc64Path}
-mkdir ${Gcc32Path}
-git clone --depth=1 https://github.com/ArrowOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9 -b arrow-13.0 ${Gcc64Path}
-git clone --depth=1 https://github.com/ArrowOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9 -b arrow-13.0 ${Gcc32Path}
+mkdir ${ClangPath}
+rm -rf ${ClangPath}/*
+wget -q $(curl https://raw.githubusercontent.com/ZyCromerZ/Clang/main/Clang-main-link.txt 2>/dev/null) -O "ZyC-Clang.tar.gz"
+tar -xf ZyC-Clang.tar.gz -C ${ClangPath} && rm -rf ZyC-Clang.tar.gz
 
 # Toolchain setup
-export PATH="${ClangPath}/bin:${Gcc64Path}/bin:${Gcc32Path}/bin:${PATH}"
+export PATH="${ClangPath}/bin:${PATH}"
 export LD_LIBRARY_PATH="${ClangPath}/lib:${LD_LIBRARY_PATH}"
 export KBUILD_COMPILER_STRING="$(${ClangPath}/bin/clang --version | head -n 1)"
 
