@@ -103,8 +103,15 @@ tgm "⚙️ <i>Compilation has been started</i>"
 compile(){
 make O=out ARCH=arm64 $DEVICE_DEFCONFIG
 make -j"$CORES" ARCH=arm64 O=out \
-    LLVM=1 \
-    LLVM_IAS=1 \
+    CC=clang \
+    LD=ld.lld \
+    AR=llvm-ar \
+    NM=llvm-nm \
+    OBJCOPY=llvm-objcopy \
+    OBJDUMP=llvm-objdump \
+    READELF=llvm-readelf \
+    OBJSIZE=llvm-size \
+    STRIP=llvm-strip \
     CLANG_TRIPLE=aarch64-linux-gnu- \
     CROSS_COMPILE=aarch64-linux-gnu- \
     CROSS_COMPILE_COMPAT=arm-linux-gnueabi- \
