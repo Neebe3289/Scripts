@@ -73,9 +73,6 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 # Grab git commit hash.
 COMMIT_HASH=$(git rev-parse --short HEAD)
 
-# Generate checksum value for git commit hash.
-CSUM=$(cksum <<<"$COMMIT_HASH" | cut -f 1 -d ' ')
-
 # Set date into ZIP name.
 DATE=$(date +"%Y%m%d-%H%M")
 
@@ -208,14 +205,13 @@ kernelsu()
     then
          msg "Do make kernelsu functional"
          cd "$MAIN_DIR"
-         curl -LSs "https://raw.githubusercontent.com/Neebe3289/KernelSU/main/kernel/setup.sh" | bash -s main
+         curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
          echo "CONFIG_KSU=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
          echo "CONFIG_KSU_DEBUG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-         echo "CONFIG_KSU_SAFE_MODE=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
          echo "CONFIG_OVERLAY_FS=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
     fi
     rm -rf KernelSU
-    git clone https://github.com/Neebe3289/KernelSU -b main
+    git clone https://github.com/tiann/KernelSU -b main
 }
 
 # Make it ZIP.
@@ -225,7 +221,7 @@ make_zip()
     ZIPNAME="$KERNEL_NAME-$DEVICE_CODENAME-$COMMIT_HASH-$DATE"
     ZIP_FINAL="$ZIPNAME.zip"
     cd AnyKernel3 || exit 1
-    sed -i "s/kernel.string=.*/kernel.string=$KERNEL_NAME by $KBUILD_BUILD_USER @ github/g" anykernel.sh
+    sed -i "s/kernel.string=.*/kernel.string=$KERNEL_NAME by $KBUILD_BUILD_USER/g" anykernel.sh
     zip -r9 "$ZIP_FINAL" ./* -x .git .gitignore README.md *placeholder ./*.zip
     cd ..
 }
