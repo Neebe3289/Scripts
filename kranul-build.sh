@@ -30,7 +30,7 @@ err()
 }
 
 # Check tg token/id and pixeldrain api keys.
-if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT" ] || [ -z "$PD_API" ]
+if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT" ]
 then
     err "Missing environment! .Please check again . ."
     exit
@@ -235,10 +235,7 @@ send_zip()
     cd AnyKernel3
     ZIPFILE=$(echo *.zip)
     SHA1=$(sha1sum "$ZIPFILE" | cut -d' ' -f1)
-    RESPONSE="$(curl -# -F "name=$ZIPFILE" -F "file=@$ZIPFILE" -u :"$PD_API" https://pixeldrain.com/api/file)"
-    FILEID=$(echo "$RESPONSE" | grep -Po '(?<="id":")[^"]*')
     send_file "$ZIPFILE" "✅ Build took : $((DIFF / 60)) minute(s) and $((DIFF % 60)) second(s) for $DEVICE_CODENAME | SHA1 : <code>$SHA1</code>"
-    send_msg "<b>Mirror download link :</b> https://pixeldrain.com/u/$FILEID"
 }
 
 # Function for upload error log during compiled.
