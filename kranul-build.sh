@@ -127,7 +127,7 @@ clone()
      git clone --depth=1 https://github.com/Neebe3289/AnyKernel3 -b begonia AnyKernel3
 
      msg "Clone telegram.sh source"
-     git clone --depth=1 https://github.com/fabianonline/telegram.sh Telegram
+     git clone --depth=1 https://github.com/fabianonline/telegram.sh telegram
 }
 
 # Export
@@ -162,13 +162,15 @@ exports()
        # e.g: '2'/'4'/'8'/'12' or set default by using 'nproc --all'
        CORES=$(nproc --all)
 
+       # Telegram directory.
+       TELEGRAM=$MAIN_DIR/telegram/telegram
+
        export TZ ARCH DEVICE_DEFCONFIG KBUILD_BUILD_USER KBUILD_BUILD_HOST \
-              PATH KBUILD_COMPILER_STRING COMPILER CORES
+              PATH KBUILD_COMPILER_STRING COMPILER CORES \
+              TELEGRAM
 }
 
-# Telegram setup.
-TELEGRAM=$MAIN_DIR/Telegram/telegram
-
+# Function to show an informational message to telegram.
 send_msg()
 {
     "${TELEGRAM}" -H -D \
