@@ -29,7 +29,7 @@ err()
     echo -e "\e[1;31m$*\e[0m"
 }
 
-# Check tg token/id and pixeldrain api keys.
+# Check telegtam token/id
 if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT" ]
 then
     err "Missing environment! .Please check again . ."
@@ -227,7 +227,7 @@ make_zip()
     cd ..
 }
 
-# Upload ZIP files to Telegram and PixelDrain.
+# Upload ZIP files to Telegram.
 send_zip()
 {
     msg "Start to upload ZIP files.."
