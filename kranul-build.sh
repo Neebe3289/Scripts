@@ -196,6 +196,8 @@ kernelsu()
 {
     if [ "$SUBMODULE" = "y" ]
     then
+       if [ ! -d "$MAIN_DIR/KernelSU" ]
+       then
          msg "Do update submodule for kernelsu"
          cd "$MAIN_DIR"
          git submodule update --init --recursive
@@ -204,6 +206,8 @@ kernelsu()
 
     if [ "$KERNELSU" = "y" ]
     then
+       if [ ! -d "$MAIN_DIR/KernelSU" ]
+       then
          msg "Do make kernelsu functional"
          cd "$MAIN_DIR"
          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s main
