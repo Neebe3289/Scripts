@@ -29,7 +29,7 @@ err() {
     echo -e "\e[1;31m$*\e[0m"
 }
 
-if [ -z "${TELEGRAM_TOKEN}" ] || [ -z "${TELEGRAM_CHAT}" ]; thenthen
+if [ -z "${TELEGRAM_TOKEN}" ] || [ -z "${TELEGRAM_CHAT}" ]; then
       err "Missing Token or Chat api keys!.."
       exit 1
 fi
@@ -53,12 +53,12 @@ clone() {
              cd "${MAIN_DIR}"
              git clone --depth=1 "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9" -b lineage-19.1 gcc64
              git clone --depth=1 "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9" -b lineage-19.1 gcc32
-             mkdir clang-llvm && aria2c -s16 -x16 -k1M "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz" -o clang.tar.gz
+             mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz" -o clang.tar.gz
              tar -zxvf clang.tar.gz -C clang-llvm && rm -rf clang.tar.gz
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
              msg "|| Downloading ZyC Clang ||"
              cd "${MAIN_DIR}"
-             aria2c -s16 -x16 -k1M "https://github.com/ZyCromerZ/Clang/releases/download/21.0.0git-20250322-release/Clang-21.0.0git-20250322.tar.gz" -o zyc-clang.tar.gz
+             mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://github.com/ZyCromerZ/Clang/releases/download/21.0.0git-20250322-release/Clang-21.0.0git-20250322.tar.gz" -o zyc-clang.tar.gz
              tar -zxvf zyc-clang.tar.gz -C clang-llvm && rm -rf zyc-clang.tar.gz
              #cd clang-llvm && bash <(curl -s https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman) --patch=glibc
              #cd ..
