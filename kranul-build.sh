@@ -20,11 +20,6 @@
 
 set -e
 
-if [ -z "${TELEGRAM_TOKEN}" ] || [ -z "${TELEGRAM_CHAT}" ]; then
-      err "Missing Token or Chat api keys!.."
-      exit 1
-fi
-
 # Function to show an informational message.
 msg() {
     echo -e "\e[1;32m$*\e[0m"
@@ -33,6 +28,11 @@ msg() {
 err() {
     echo -e "\e[1;31m$*\e[0m"
 }
+
+if [ -z "${TELEGRAM_TOKEN}" ] || [ -z "${TELEGRAM_CHAT}" ]; then
+      err "Missing Token or Chat api keys!.."
+      exit
+fi
 
 MAIN_DIR="$(pwd)"
 DEVICE_MODEL="Redmi Note 8 Pro"
@@ -54,11 +54,11 @@ clone() {
              git clone --depth=1 "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9" -b lineage-19.1 gcc64
              git clone --depth=1 "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9" -b lineage-19.1 gcc32
              mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz" -o clang.tar.gz
-             tar -zxvf clang.tar.gz -C clang-llvm && rm -rf clang.tar.gz
+             tar -xf clang.tar.gz -C clang-llvm && rm -rf clang.tar.gz
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
              msg "|| Downloading ZyC Clang ||"
              mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://github.com/ZyCromerZ/Clang/releases/download/21.0.0git-20250322-release/Clang-21.0.0git-20250322.tar.gz" -o zyc-clang.tar.gz
-             tar -zxvf zyc-clang.tar.gz -C clang-llvm && rm -rf zyc-clang.tar.gz
+             tar -xf zyc-clang.tar.gz -C clang-llvm && rm -rf zyc-clang.tar.gz
              #cd clang-llvm && bash <(curl -s https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman) --patch=glibc
              #cd ..
        fi
@@ -193,7 +193,7 @@ compile() {
              msg "Total time elapsed: $((TOTAL_TIME / 60)) minute(s), $((TOTAL_TIME % 60)) second(s)"
              # Zipping
              cp "${MAIN_DIR}/out/arch/arm64/boot/${IMAGE}" AK3
-             cd AK3 || exit 1
+             cd AK3 || exit
              if [[ "${WITH_KSU}" == "yes" ]]; then
                    sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-KSU-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
                    ZIPNAME="${KERNEL_NAME}-KSU-${DEVICE_CODENAME}-${COMMIT_HASH}-${DATE}.zip"
@@ -208,7 +208,7 @@ compile() {
              err "|| Build failed to compile! ||"
              ERROR_LOG="$(echo error.log)"
              send_file "${ERROR_LOG}" "❌ Build failed to compile, Please check log to fix it!"
-             exit 1
+             exit
        fi
 }
 
