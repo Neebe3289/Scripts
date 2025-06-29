@@ -1,0 +1,70 @@
+name: Android Kernel Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      KERNEL_REPO:
+        description: Input GitHub Repo
+        required: true
+        default: 'https://github.com/Neebe3289/kernel_xiaomi_begonia'
+      KERNEL_BRANCH:
+        description: Input Kernel Branch
+        required: true
+
+env:
+  TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+  TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
+  TZ: "Asia/Jakarta"
+
+jobs:
+  build:
+    name: Build Kernel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set swap to 4G
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 4
+
+      - name: Setup Build Environment
+        run: |
+          sudo apt update -y
+          sudo apt install -y \
+          lld llvm gcc g++ g++-multilib \
+          binutils-arm-linux-gnueabi binutils-aarch64-linux-gnu \
+          curl wget vim git ccache automake flex lzop bison gperf \
+          build-essential zip unzip zlib1g-dev libssl-dev bc make \
+          liblz4-tool libxml2-utils libxml2 libxml-simple-perl libxml-sax-base-perl \
+          squashfs-tools pngcrush optipng xsltproc \
+          device-tree-compiler libelf-dev libc6-dev libc6-dev-i386 \
+          libncurses-dev lib32z-dev libx11-dev libgl1-mesa-dev \
+          python3 python3-pip libbz2-dev
+
+          sudo ln -sf /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
+
+      - name: Setup Git Identity
+        run: |
+          git config --global user.name "bot"
+          git config --global user.email "bot@email.com"
+
+      - name: Set ccache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/ccache
+          key: ${{ runner.os }}-ccache-${{ hashFiles('**/Makefile') }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
+      - name: Clone Kernel Source
+        run: |
+          git clone --depth=1 ${{ github.event.inputs.KERNEL_REPO }} -b ${{ github.event.inputs.KERNEL_BRANCH }} kernel
+
+      - name: Run Build Script
+        run: |
+          cd kernel
+          wget https://raw.githubusercontent.com/Neebe3289/Scripts/refs/heads/main/kranul-build.sh
+          bash kranul-build.sh

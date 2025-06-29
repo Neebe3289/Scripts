@@ -20,6 +20,11 @@
 
 set -e
 
+if [ -z "${TELEGRAM_TOKEN}" ] || [ -z "${TELEGRAM_CHAT}" ]; then
+      err "Missing Token or Chat api keys!.."
+      exit 1
+fi
+
 # Function to show an informational message.
 msg() {
     echo -e "\e[1;32m$*\e[0m"
@@ -28,11 +33,6 @@ msg() {
 err() {
     echo -e "\e[1;31m$*\e[0m"
 }
-
-if [ -z "${TELEGRAM_TOKEN}" ] || [ -z "${TELEGRAM_CHAT}" ]; then
-      err "Missing Token or Chat api keys!.."
-      exit 1
-fi
 
 MAIN_DIR="$(pwd)"
 DEVICE_MODEL="Redmi Note 8 Pro"
@@ -43,21 +43,19 @@ KERNEL_NAME="perf-Kernel"
 KERNEL_VER="$(make kernelversion)"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_HASH="$(git rev-parse --short HEAD)"
-DATE="$(TZ=Asia/Jakarta date +'%Y%m%d-%H%M')"
+DATE="$(date +'%Y%m%d-%H%M')"
 TOOLCHAIN="aosp" # 'aosp' | 'zyc'
 
 # Clone function.
 clone() {
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
              msg "|| Downloading AOSP Clang ||"
-             cd "${MAIN_DIR}"
              git clone --depth=1 "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9" -b lineage-19.1 gcc64
              git clone --depth=1 "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9" -b lineage-19.1 gcc32
              mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz" -o clang.tar.gz
              tar -zxvf clang.tar.gz -C clang-llvm && rm -rf clang.tar.gz
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
              msg "|| Downloading ZyC Clang ||"
-             cd "${MAIN_DIR}"
              mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://github.com/ZyCromerZ/Clang/releases/download/21.0.0git-20250322-release/Clang-21.0.0git-20250322.tar.gz" -o zyc-clang.tar.gz
              tar -zxvf zyc-clang.tar.gz -C clang-llvm && rm -rf zyc-clang.tar.gz
              #cd clang-llvm && bash <(curl -s https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman) --patch=glibc
@@ -78,6 +76,9 @@ exports() {
        export KBUILD_BUILD_USER="build-user"
        export KBUILD_BUILD_HOST="build-host"
        export CORES="$(nproc --all)"
+       export CCACHE_DIR=/tmp/ccache
+       export USE_CCACHE=1
+       ccache -M10G -o compression=true -z
        export TELEGRAM="${MAIN_DIR}/telegram/telegram"
 
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
@@ -109,7 +110,7 @@ send_file() {
 # Compilation setup.
 compile() {
        # Send info build to telegram
-       send_msg "<b>===========================================</b>" \
+       send_msg "<b>==========================================</b>" \
           "<b>• DATE :</b> <code>$(date +"%A, %d %b %Y, %H:%M:%S")</code>" \
           "<b>• DEVICE :</b> <code>${DEVICE_CODENAME}</code>" \
           "<b>• KERNEL NAME :</b> <code>${KERNEL_NAME}</code>" \
@@ -117,13 +118,13 @@ compile() {
           "<b>• BRANCH NAME :</b> <code>${BRANCH}</code>" \
           "<b>• COMPILER :</b> <code>${KBUILD_COMPILER_STRING}</code>" \
           "<b>• LAST COMMIT :</b> <code>$(git log --pretty=format:'%s' -1)</code>" \
-          "<b>===========================================</b>"
+          "<b>==========================================</b>"
 
        # Make arrays
        MAKE=()
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
              MAKE+=(
-                CC=clang
+                CC="ccache clang"
                 LD=ld.lld
                 AR=llvm-ar
                 NM=llvm-nm
@@ -139,7 +140,7 @@ compile() {
             )
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
              MAKE+=(
-                CC=clang
+                CC="ccache clang"
                 LD=ld.lld
                 AR=llvm-ar
                 NM=llvm-nm
@@ -177,7 +178,7 @@ compile() {
              send_file "${ZIPNAME}" "✅ Build took : $((TOTAL_TIME / 60)) minute(s) and $((TOTAL_TIME % 60)) second(s) for ${DEVICE_CODENAME} | MD5 : <code>$(md5sum "${ZIPNAME}" | cut -d' ' -f1)</code>"
        else
              err "|| Build failed to compile! ||"
-             ERROR_LOG=$(echo error.log)
+             ERROR_LOG="$(echo error.log)"
              send_file "${ERROR_LOG}" "❌ Build failed to compile, Please check log to fix it!"
              exit 1
        fi
