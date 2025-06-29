@@ -10,6 +10,7 @@ on:
       KERNEL_BRANCH:
         description: Input Kernel Branch
         required: true
+        default: 'vic-personal'
 
 env:
   TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}

@@ -44,6 +44,7 @@ KERNEL_VER="$(make kernelversion)"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_HASH="$(git rev-parse --short HEAD)"
 DATE="$(date +'%Y%m%d-%H%M')"
+WITH_KSU="no" # 'no' | 'yes'
 TOOLCHAIN="aosp" # 'aosp' | 'zyc'
 
 # Clone function.
@@ -107,6 +108,26 @@ send_file() {
         "$2"
 }
 
+# Function for KernelSU.
+kernelsu() {
+       if [[ "${WITH_KSU}" == "yes" ]]; then
+             msg "|| Do make kernelsu functional ||"
+             cd "${MAIN_DIR}"
+             curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/next/kernel/setup.sh" | bash -s next
+             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/9e75e4350a37560fc56b3a67f24874a2342739c7.patch | patch -p1
+             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/130ac439d20de3c62600960c78f215627361cf63.patch | patch -p1
+             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/dbe1d7d7668beef540bb4e5badd27a7dc7c99739.patch | patch -p1
+             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/45d3fc4aedcf7e235047bf538a9920601c854cbb.patch | patch -p1
+             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/52a95145b911b245616094844f4f8efca52b56b0.patch | patch -p1
+             curl -LSs https://github.com/sidex15/android_kernel_lge_sm8150/commit/fcc59dc3310d3a1511d02dc3ac6d1e113517ece1.patch | patch -p1
+             echo "CONFIG_KSU=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_DEBUG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_KPROBES_HOOK=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KPROBES=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_TMPFS_XATTR=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+       fi
+}
+
 # Compilation setup.
 compile() {
        # Send info build to telegram
@@ -157,6 +178,7 @@ compile() {
 
        # Start build
        BUILD_START=$(date +"%s")
+       kernelsu
 
        msg "|| Compilation has been started ||"
        mkdir -p out
@@ -172,8 +194,14 @@ compile() {
              # Zipping
              cp "${MAIN_DIR}/out/arch/arm64/boot/${IMAGE}" AK3
              cd AK3 || exit 1
-             sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
-             ZIPNAME="${KERNEL_NAME}-${DEVICE_CODENAME}-${COMMIT_HASH}-${DATE}.zip"
+             if [[ "${WITH_KSU}" == "yes" ]]; then
+                   sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-KSU-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
+                   ZIPNAME="${KERNEL_NAME}-KSU-${DEVICE_CODENAME}-${COMMIT_HASH}-${DATE}.zip"
+             else
+                   sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
+                   ZIPNAME="${KERNEL_NAME}-${DEVICE_CODENAME}-${COMMIT_HASH}-${DATE}.zip"
+             fi
+
              zip -r9 "${ZIPNAME}" ./* #-x .git .gitignore README.md ./*.zip#
              send_file "${ZIPNAME}" "✅ Build took : $((TOTAL_TIME / 60)) minute(s) and $((TOTAL_TIME % 60)) second(s) for ${DEVICE_CODENAME} | MD5 : <code>$(md5sum "${ZIPNAME}" | cut -d' ' -f1)</code>"
        else
