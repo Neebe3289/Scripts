@@ -31,7 +31,7 @@ err() {
 
 if [ -z "${TELEGRAM_TOKEN}" ] || [ -z "${TELEGRAM_CHAT}" ]; then
       err "Missing Token or Chat api keys!.."
-      exit
+      exit 1
 fi
 
 MAIN_DIR="$(pwd)"
@@ -43,7 +43,6 @@ KERNEL_NAME="perf-Kernel"
 KERNEL_VER="$(make kernelversion)"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_HASH="$(git rev-parse --short HEAD)"
-DATE="$(date +'%Y%m%d-%H%M')"
 WITH_KSU="no" # 'no' | 'yes'
 TOOLCHAIN="aosp" # 'aosp' | 'zyc'
 
@@ -53,12 +52,12 @@ clone() {
              msg "|| Downloading AOSP Clang ||"
              git clone --depth=1 "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9" -b lineage-19.1 gcc64
              git clone --depth=1 "https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9" -b lineage-19.1 gcc32
-             mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r536225.tar.gz" -o clang.tar.gz
-             tar -xf clang.tar.gz -C clang-llvm && rm -rf clang.tar.gz
+             mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz" -o clang.tar.gz
+             tar -zxvf clang.tar.gz -C clang-llvm && rm -rf clang.tar.gz
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
              msg "|| Downloading ZyC Clang ||"
-             mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "https://github.com/ZyCromerZ/Clang/releases/download/21.0.0git-20250322-release/Clang-21.0.0git-20250322.tar.gz" -o zyc-clang.tar.gz
-             tar -xf zyc-clang.tar.gz -C clang-llvm && rm -rf zyc-clang.tar.gz
+             mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "$(curl -s https://raw.githubusercontent.com/ZyCromerZ/Clang/refs/heads/main/Clang-main-link.txt)" -o zyc-clang.tar.gz
+             tar -zxvf zyc-clang.tar.gz -C clang-llvm && rm -rf zyc-clang.tar.gz
              #cd clang-llvm && bash <(curl -s https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman) --patch=glibc
              #cd ..
        fi
@@ -76,19 +75,26 @@ exports() {
        export DEVICE_DEFCONFIG
        export KBUILD_BUILD_USER="build-user"
        export KBUILD_BUILD_HOST="build-host"
+       export KBUILD_COMPILER_STRING="$("${MAIN_DIR}/clang-llvm/bin/clang" --version | head -n 1)"
        export CORES="$(nproc --all)"
-       export CCACHE_DIR=/tmp/ccache
-       export USE_CCACHE=1
-       ccache -M10G -o compression=true -z
        export TELEGRAM="${MAIN_DIR}/telegram/telegram"
 
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
-             export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
-             export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib:${LD_LIBRARY_PATH}"
-             export KBUILD_COMPILER_STRING="$("${MAIN_DIR}/clang-llvm/bin/clang" --version | head -n 1)"
+           if [ -d "${MAIN_DIR}/clang-llvm/lib64" ]; then
+              export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
+              export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib64:${LD_LIBRARY_PATH}"
+           elif [ -d "${MAIN_DIR}/clang-llvm/lib" ]; then
+              export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
+              export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib:${LD_LIBRARY_PATH}"
+           fi
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
-             export PATH="${MAIN_DIR}/clang-llvm/bin:${PATH}"
-             export KBUILD_COMPILER_STRING="$("${MAIN_DIR}/clang-llvm/bin/clang" --version | head -n 1)"
+           if [ -d "${MAIN_DIR}/clang-llvm/lib64" ]; then
+              export PATH="${MAIN_DIR}/clang-llvm/bin:${PATH}"
+              export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib64:${LD_LIBRARY_PATH}"
+           elif [ -d "${MAIN_DIR}/clang-llvm/lib" ]; then
+              export PATH="${MAIN_DIR}/clang-llvm/bin:${PATH}"
+              export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib:${LD_LIBRARY_PATH}"
+           fi
        fi
 }
 
@@ -131,7 +137,7 @@ kernelsu() {
 # Compilation setup.
 compile() {
        # Send info build to telegram
-       send_msg "<b>==========================================</b>" \
+       send_msg "<b>=========================================</b>" \
           "<b>• DATE :</b> <code>$(date +"%A, %d %b %Y, %H:%M:%S")</code>" \
           "<b>• DEVICE :</b> <code>${DEVICE_CODENAME}</code>" \
           "<b>• KERNEL NAME :</b> <code>${KERNEL_NAME}</code>" \
@@ -139,13 +145,13 @@ compile() {
           "<b>• BRANCH NAME :</b> <code>${BRANCH}</code>" \
           "<b>• COMPILER :</b> <code>${KBUILD_COMPILER_STRING}</code>" \
           "<b>• LAST COMMIT :</b> <code>$(git log --pretty=format:'%s' -1)</code>" \
-          "<b>==========================================</b>"
+          "<b>=========================================</b>"
 
        # Make arrays
        MAKE=()
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
              MAKE+=(
-                CC="ccache clang"
+                CC=clang
                 LD=ld.lld
                 AR=llvm-ar
                 NM=llvm-nm
@@ -161,7 +167,7 @@ compile() {
             )
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
              MAKE+=(
-                CC="ccache clang"
+                CC=clang
                 LD=ld.lld
                 AR=llvm-ar
                 NM=llvm-nm
@@ -177,23 +183,23 @@ compile() {
        fi
 
        # Start build
-       BUILD_START=$(date +"%s")
-       kernelsu
+       BUILD_START="$(date +'%s')"
 
        msg "|| Compilation has been started ||"
        mkdir -p out
        make O=out ARCH=arm64 "${DEVICE_DEFCONFIG}"
        make -j"${CORES}" O=out ARCH=arm64 "${MAKE[@]}" 2>&1 | tee error.log
 
-       BUILD_END=$(date +"%s")
-       TOTAL_TIME=$((BUILD_END - BUILD_START))
+       BUILD_END="$(date +'%s')"
+       TOTAL_TIME="$((BUILD_END - BUILD_START))"
+       DATE="$(date +'%Y%m%d-%H%M')"
 
        if [[ -f "${MAIN_DIR}/out/arch/arm64/boot/${IMAGE}" ]]; then
              msg "|| Build succesfully to compile! ||"
              msg "Total time elapsed: $((TOTAL_TIME / 60)) minute(s), $((TOTAL_TIME % 60)) second(s)"
              # Zipping
              cp "${MAIN_DIR}/out/arch/arm64/boot/${IMAGE}" AK3
-             cd AK3 || exit
+             cd AK3 || exit 1
              if [[ "${WITH_KSU}" == "yes" ]]; then
                    sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-KSU-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
                    ZIPNAME="${KERNEL_NAME}-KSU-${DEVICE_CODENAME}-${COMMIT_HASH}-${DATE}.zip"
@@ -208,10 +214,11 @@ compile() {
              err "|| Build failed to compile! ||"
              ERROR_LOG="$(echo error.log)"
              send_file "${ERROR_LOG}" "❌ Build failed to compile, Please check log to fix it!"
-             exit
+             exit 1
        fi
 }
 
 clone
 exports
+kernelsu
 compile
