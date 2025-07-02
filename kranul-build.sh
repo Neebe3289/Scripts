@@ -44,7 +44,7 @@ KERNEL_VER="$(make kernelversion)"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_HASH="$(git rev-parse --short HEAD)"
 WITH_KSU="no" # 'no' | 'yes'
-TOOLCHAIN="aosp" # 'aosp' | 'zyc'
+TOOLCHAIN="zyc" # 'aosp' | 'zyc'
 
 # Clone function.
 clone() {
@@ -80,19 +80,17 @@ exports() {
        export TELEGRAM="${MAIN_DIR}/telegram/telegram"
 
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
-           if [ -d "${MAIN_DIR}/clang-llvm/lib64" ]; then
-              export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
+            export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
+            if [[ -d "${MAIN_DIR}/clang-llvm/lib64" ]]; then
               export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib64:${LD_LIBRARY_PATH}"
-           elif [ -d "${MAIN_DIR}/clang-llvm/lib" ]; then
-              export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
+           elif [[ -d "${MAIN_DIR}/clang-llvm/lib" ]]; then
               export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib:${LD_LIBRARY_PATH}"
            fi
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
-           if [ -d "${MAIN_DIR}/clang-llvm/lib64" ]; then
-              export PATH="${MAIN_DIR}/clang-llvm/bin:${PATH}"
+           export PATH="${MAIN_DIR}/clang-llvm/bin:${PATH}"
+           if [[ -d "${MAIN_DIR}/clang-llvm/lib64" ]]; then
               export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib64:${LD_LIBRARY_PATH}"
-           elif [ -d "${MAIN_DIR}/clang-llvm/lib" ]; then
-              export PATH="${MAIN_DIR}/clang-llvm/bin:${PATH}"
+           elif [[ -d "${MAIN_DIR}/clang-llvm/lib" ]]; then
               export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib:${LD_LIBRARY_PATH}"
            fi
        fi
@@ -144,7 +142,7 @@ compile() {
           "<b>• LINUX VERSION :</b> <code>${KERNEL_VER}</code>" \
           "<b>• BRANCH NAME :</b> <code>${BRANCH}</code>" \
           "<b>• COMPILER :</b> <code>${KBUILD_COMPILER_STRING}</code>" \
-          "<b>• LAST COMMIT :</b> <code>$(git log --pretty=format:'%s' -1)</code>" \
+          "<b>• LAST COMMIT :</b> <code>$(git log --pretty=format:'%h : %s' -1)</code>" \
           "<b>=========================================</b>"
 
        # Make arrays
