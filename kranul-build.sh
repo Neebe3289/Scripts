@@ -80,8 +80,8 @@ exports() {
        export TELEGRAM="${MAIN_DIR}/telegram/telegram"
 
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
-            export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
-            if [[ -d "${MAIN_DIR}/clang-llvm/lib64" ]]; then
+           export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
+           if [[ -d "${MAIN_DIR}/clang-llvm/lib64" ]]; then
               export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib64:${LD_LIBRARY_PATH}"
            elif [[ -d "${MAIN_DIR}/clang-llvm/lib" ]]; then
               export LD_LIBRARY_PATH="${MAIN_DIR}/clang-llvm/lib:${LD_LIBRARY_PATH}"
