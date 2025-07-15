@@ -149,7 +149,7 @@ compile() {
        MAKE=()
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
              MAKE+=(
-                CC=clang
+                CC="ccache clang"
                 LD=ld.lld
                 AR=llvm-ar
                 NM=llvm-nm
@@ -165,7 +165,7 @@ compile() {
             )
        elif [[ "${TOOLCHAIN}" == "zyc" ]]; then
              MAKE+=(
-                CC=clang
+                CC="ccache clang"
                 LD=ld.lld
                 AR=llvm-ar
                 NM=llvm-nm
