@@ -38,11 +38,12 @@ MAIN_DIR="$(pwd)"
 DEVICE_MODEL="Redmi Note 8 Pro"
 DEVICE_CODENAME="begonia"
 DEVICE_DEFCONFIG="begonia_user_defconfig"
-IMAGE="Image.gz-dtb"
 KERNEL_NAME="perf-Kernel"
 KERNEL_VER="$(make kernelversion)"
+KERNEL_IMG="${MAIN_DIR}/out/arch/arm64/boot/Image.gz-dtb"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-COMMIT_HASH="$(git rev-parse --short HEAD)"
+COMMIT_HASH="$(git log --pretty=format:'%h' -1)"
+CORES="$(nproc --all)"
 WITH_KSU="no" # 'no' | 'yes'
 TOOLCHAIN="zyc" # 'aosp' | 'zyc'
 
@@ -72,12 +73,9 @@ clone() {
 exports() {
        export TZ="Asia/Jakarta"
        export ARCH="arm64"
-       export DEVICE_DEFCONFIG
        export KBUILD_BUILD_USER="build-user"
        export KBUILD_BUILD_HOST="build-host"
-       export KBUILD_COMPILER_STRING="$("${MAIN_DIR}/clang-llvm/bin/clang" --version | head -n 1)"
-       export CORES="$(nproc --all)"
-       export TELEGRAM="${MAIN_DIR}/telegram/telegram"
+       export KBUILD_COMPILER_STRING="$("${MAIN_DIR}"/clang-llvm/bin/clang --version | head -n 1 | sed -e 's/  */ /g' -e 's/[[:space:]]*$//')"
 
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
            export PATH="${MAIN_DIR}/clang-llvm/bin:${MAIN_DIR}/gcc64/bin:${MAIN_DIR}/gcc32/bin:${PATH}"
@@ -97,6 +95,7 @@ exports() {
 }
 
 # Function to show an informational message to telegram.
+TELEGRAM="${MAIN_DIR}/telegram/telegram"
 send_msg() {
     "${TELEGRAM}" -H -D \
     "$(
@@ -110,6 +109,18 @@ send_file() {
     "${TELEGRAM}" -H \
         -f "$1" \
         "$2"
+}
+
+tg_msg() {
+    send_msg "<b>=====================================</b>" \
+        "<b>• Date :</b> <code>$(date +'%A, %d %b %Y, %H:%M:%S')</code>" \
+        "<b>• Device :</b> <code>${DEVICE_MODEL}</code>" \
+        "<b>• Kernel Name :</b> <code>${KERNEL_NAME}</code>" \
+        "<b>• Linux Version :</b> <code>${KERNEL_VER}</code>" \
+        "<b>• Branch Name :</b> <code>${BRANCH}</code>" \
+        "<b>• Compiler :</b> <code>${KBUILD_COMPILER_STRING}</code>" \
+        "<b>• Last Commit :</b> <code>$(git log -1 --pretty=format:'%h : %s')</code>" \
+        "<b>=====================================</b>"
 }
 
 # Function for KernelSU.
@@ -134,17 +145,6 @@ kernelsu() {
 
 # Compilation setup.
 compile() {
-       # Send info build to telegram
-       send_msg "<b>=========================================</b>" \
-          "<b>• DATE :</b> <code>$(date +"%A, %d %b %Y, %H:%M:%S")</code>" \
-          "<b>• DEVICE :</b> <code>${DEVICE_CODENAME}</code>" \
-          "<b>• KERNEL NAME :</b> <code>${KERNEL_NAME}</code>" \
-          "<b>• LINUX VERSION :</b> <code>${KERNEL_VER}</code>" \
-          "<b>• BRANCH NAME :</b> <code>${BRANCH}</code>" \
-          "<b>• COMPILER :</b> <code>${KBUILD_COMPILER_STRING}</code>" \
-          "<b>• LAST COMMIT :</b> <code>$(git log --pretty=format:'%h : %s' -1)</code>" \
-          "<b>=========================================</b>"
-
        # Make arrays
        MAKE=()
        if [[ "${TOOLCHAIN}" == "aosp" ]]; then
@@ -182,21 +182,22 @@ compile() {
 
        # Start build
        BUILD_START="$(date +'%s')"
-
        msg "|| Compilation has been started ||"
+       tg_msg
+
        mkdir -p out
-       make O=out ARCH=arm64 "${DEVICE_DEFCONFIG}"
-       make -j"${CORES}" O=out ARCH=arm64 "${MAKE[@]}" 2>&1 | tee error.log
+       make O=out "${DEVICE_DEFCONFIG}"
+       make -j"${CORES}" O=out "${MAKE[@]}" 2>&1 | tee kernel.log
 
        BUILD_END="$(date +'%s')"
        TOTAL_TIME="$((BUILD_END - BUILD_START))"
        DATE="$(date +'%Y%m%d-%H%M')"
 
-       if [[ -f "${MAIN_DIR}/out/arch/arm64/boot/${IMAGE}" ]]; then
+       if [[ -f "${KERNEL_IMG}" ]]; then
              msg "|| Build succesfully to compile! ||"
              msg "Total time elapsed: $((TOTAL_TIME / 60)) minute(s), $((TOTAL_TIME % 60)) second(s)"
              # Zipping
-             cp "${MAIN_DIR}/out/arch/arm64/boot/${IMAGE}" AK3
+             cp "${KERNEL_IMG}" AK3
              cd AK3 || exit 1
              if [[ "${WITH_KSU}" == "yes" ]]; then
                    sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-KSU-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
@@ -210,8 +211,8 @@ compile() {
              send_file "${ZIPNAME}" "✅ Build took : $((TOTAL_TIME / 60)) minute(s) and $((TOTAL_TIME % 60)) second(s) for ${DEVICE_CODENAME} | MD5 : <code>$(md5sum "${ZIPNAME}" | cut -d' ' -f1)</code>"
        else
              err "|| Build failed to compile! ||"
-             ERROR_LOG="$(echo error.log)"
-             send_file "${ERROR_LOG}" "❌ Build failed to compile, Please check log to fix it!"
+             KERNEL_LOG="$(echo kernel.log)"
+             send_file "${KERNEL_LOG}" "❌ Build failed to compile, Please check log to fix it!"
              exit 1
        fi
 }
