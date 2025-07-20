@@ -45,7 +45,7 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_HASH="$(git log --pretty=format:'%h' -1)"
 CORES="$(nproc --all)"
 WITH_KSU="no" # 'no' | 'yes'
-TOOLCHAIN="zyc" # 'aosp' | 'zyc'
+TOOLCHAIN="aosp" # 'aosp' | 'zyc'
 
 # Clone function.
 clone() {
@@ -67,6 +67,8 @@ clone() {
        git clone --depth=1 "https://github.com/Neebe3289/AnyKernel3" -b begonia AK3
        msg "|| Clone telegram.sh source ||"
        git clone --depth=1 "https://github.com/fabianonline/telegram.sh" telegram
+       msg "|| Clone patch source ||"
+       git clone https://github.com/Neebe3289/dumped dump
 }
 
 # Exports function.
@@ -129,12 +131,21 @@ kernelsu() {
              msg "|| Do make kernelsu functional ||"
              cd "${MAIN_DIR}"
              curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/next/kernel/setup.sh" | bash -s next
-             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/9e75e4350a37560fc56b3a67f24874a2342739c7.patch | patch -p1
-             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/130ac439d20de3c62600960c78f215627361cf63.patch | patch -p1
-             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/dbe1d7d7668beef540bb4e5badd27a7dc7c99739.patch | patch -p1
-             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/45d3fc4aedcf7e235047bf538a9920601c854cbb.patch | patch -p1
-             curl -LSs https://github.com/Neebe3289/kernel_xiaomi_begonia/commit/52a95145b911b245616094844f4f8efca52b56b0.patch | patch -p1
-             curl -LSs https://github.com/sidex15/android_kernel_lge_sm8150/commit/fcc59dc3310d3a1511d02dc3ac6d1e113517ece1.patch | patch -p1
+             for kpatch in \
+                dump/kernel_patches/cred-add-get-cred-rcu.patch \
+                dump/kernel_patches/fs-path_umount.patch \
+                dump/kernel_patches/maccess-rename-strncpy_from_unsafe_user-to-strncpy_from_user_nofault.patch \
+                dump/kernel_patches/integrate_scope-minimized_manual_hooks.patch \
+                dump/kernel_patches/lineage_maps.patch \
+                dump/kernel_patches/0001-ptrace.patch
+             do
+                if patch -p1 < "$kpatch"; then
+                     msg "apply patch success for $kpatch"
+                else
+                     err "apply patch failed for $kpatch"
+                     exit 1
+                fi
+             done
              echo "CONFIG_KSU=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KSU_DEBUG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KSU_KPROBES_HOOK=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
