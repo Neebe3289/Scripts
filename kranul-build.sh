@@ -30,8 +30,8 @@ err() {
 }
 
 if [ -z "${TELEGRAM_TOKEN}" ] || [ -z "${TELEGRAM_CHAT}" ]; then
-      err "Missing Token or Chat api keys!.."
-      exit 1
+    err "Missing Token or Chat api keys!.."
+    exit 1
 fi
 
 MAIN_DIR="$(pwd)"
@@ -41,10 +41,11 @@ DEVICE_DEFCONFIG="begonia_user_defconfig"
 KERNEL_NAME="perf-Kernel"
 KERNEL_VER="$(make kernelversion)"
 KERNEL_IMG="${MAIN_DIR}/out/arch/arm64/boot/Image.gz-dtb"
+KERNEL_LOG="${MAIN_DIR}/out/buildlog-$(date +'%H%M').txt"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_HASH="$(git log --pretty=format:'%h' -1)"
 CORES="$(nproc --all)"
-WITH_KSU="no" # 'no' | 'yes'
+WITH_KSU="0" # '0' | '1'
 TOOLCHAIN="aosp" # 'aosp' | 'zyc'
 
 # Clone function.
@@ -59,8 +60,6 @@ clone() {
              msg "|| Downloading ZyC Clang ||"
              mkdir -p clang-llvm && aria2c -s16 -x16 -k1M "$(curl -s https://raw.githubusercontent.com/ZyCromerZ/Clang/refs/heads/main/Clang-main-link.txt)" -o zyc-clang.tar.gz
              tar -zxvf zyc-clang.tar.gz -C clang-llvm && rm -rf zyc-clang.tar.gz
-             #cd clang-llvm && bash <(curl -s https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman) --patch=glibc
-             #cd ..
        fi
 
        msg "|| Clone AnyKernel3 source ||"
@@ -68,7 +67,7 @@ clone() {
        msg "|| Clone telegram.sh source ||"
        git clone --depth=1 "https://github.com/fabianonline/telegram.sh" telegram
        msg "|| Clone patch source ||"
-       git clone https://github.com/Neebe3289/dumped dump
+       git clone "https://github.com/Neebe3289/dumped" dump
 }
 
 # Exports function.
@@ -127,24 +126,23 @@ tg_msg() {
 
 # Function for KernelSU.
 kernelsu() {
-       if [[ "${WITH_KSU}" == "yes" ]]; then
+       if [[ "${WITH_KSU}" == "1" ]]; then
              msg "|| Do make kernelsu functional ||"
              cd "${MAIN_DIR}"
              curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/next/kernel/setup.sh" | bash -s next
              for kpatch in \
-                dump/kernel_patches/cred-add-get-cred-rcu.patch \
-                dump/kernel_patches/fs-path_umount.patch \
-                dump/kernel_patches/maccess-rename-strncpy_from_unsafe_user-to-strncpy_from_user_nofault.patch \
-                dump/kernel_patches/integrate_scope-minimized_manual_hooks.patch \
-                dump/kernel_patches/lineage_maps.patch \
-                dump/kernel_patches/0001-ptrace.patch
+                 dump/kernel_patches/cred-add-get-cred-rcu.patch \
+                 dump/kernel_patches/fs-path_umount.patch \
+                 dump/kernel_patches/maccess-rename-strncpy_from_unsafe_user-to-strncpy_from_user_nofault.patch \
+                 dump/kernel_patches/integrate_scope-minimized_manual_hooks.patch \
+                 dump/kernel_patches/0001-ptrace.patch
              do
-                if patch -p1 < "$kpatch"; then
-                     msg "apply patch success for $kpatch"
-                else
-                     err "apply patch failed for $kpatch"
-                     exit 1
-                fi
+                 if patch -p1 < "$kpatch"; then
+                      msg "apply patch success for $kpatch"
+                 else
+                      err "apply patch failed for $kpatch"
+                      exit 1
+                 fi
              done
              echo "CONFIG_KSU=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KSU_DEBUG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
@@ -198,7 +196,7 @@ compile() {
 
        mkdir -p out
        make O=out "${DEVICE_DEFCONFIG}"
-       make -j"${CORES}" O=out "${MAKE[@]}" 2>&1 | tee kernel.log
+       make -j"${CORES}" O=out "${MAKE[@]}" 2>&1 | tee "${KERNEL_LOG}"
 
        BUILD_END="$(date +'%s')"
        TOTAL_TIME="$((BUILD_END - BUILD_START))"
@@ -210,19 +208,17 @@ compile() {
              # Zipping
              cp "${KERNEL_IMG}" AK3
              cd AK3 || exit 1
-             if [[ "${WITH_KSU}" == "yes" ]]; then
+             if [[ "${WITH_KSU}" == "1" ]]; then
                    sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-KSU-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
                    ZIPNAME="${KERNEL_NAME}-KSU-${DEVICE_CODENAME}-${COMMIT_HASH}-${DATE}.zip"
              else
                    sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
                    ZIPNAME="${KERNEL_NAME}-${DEVICE_CODENAME}-${COMMIT_HASH}-${DATE}.zip"
              fi
-
              zip -r9 "${ZIPNAME}" ./* #-x .git .gitignore README.md ./*.zip#
              send_file "${ZIPNAME}" "✅ Build took : $((TOTAL_TIME / 60)) minute(s) and $((TOTAL_TIME % 60)) second(s) for ${DEVICE_CODENAME} | MD5 : <code>$(md5sum "${ZIPNAME}" | cut -d' ' -f1)</code>"
        else
              err "|| Build failed to compile! ||"
-             KERNEL_LOG="$(echo kernel.log)"
              send_file "${KERNEL_LOG}" "❌ Build failed to compile, Please check log to fix it!"
              exit 1
        fi
