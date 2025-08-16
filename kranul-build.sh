@@ -130,6 +130,16 @@ kernelsu() {
              msg "|| Do make kernelsu functional ||"
              cd "${MAIN_DIR}"
              curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/next/kernel/setup.sh" | bash -s next
+             for ksu_patch in \
+                 dump/KernelSU/kernel-add-TheWildJames-Fork-Manager.patch
+             do
+                 if patch -d KernelSU -p1 < "$ksu_patch"; then
+                      msg "apply patch success for $ksu_patch"
+                 else
+                      err "apply patch failed for $ksu_patch"
+                      exit 1
+                 fi
+             done
              for kpatch in \
                  dump/kernel_patches/cred-add-get-cred-rcu.patch \
                  dump/kernel_patches/fs-path_umount.patch \
@@ -160,14 +170,8 @@ compile() {
              MAKE+=(
                 CC="ccache clang"
                 LD=ld.lld
-                AR=llvm-ar
-                NM=llvm-nm
                 LLVM=1
                 LLVM_IAS=1
-                OBJCOPY=llvm-objcopy
-                OBJDUMP=llvm-objdump
-                READELF=llvm-readelf
-                STRIP=llvm-strip
                 CLANG_TRIPLE=aarch64-linux-gnu-
                 CROSS_COMPILE=aarch64-linux-android-
                 CROSS_COMPILE_ARM32=arm-linux-androideabi-
@@ -176,14 +180,8 @@ compile() {
              MAKE+=(
                 CC="ccache clang"
                 LD=ld.lld
-                AR=llvm-ar
-                NM=llvm-nm
                 LLVM=1
                 LLVM_IAS=1
-                OBJCOPY=llvm-objcopy
-                OBJDUMP=llvm-objdump
-                READELF=llvm-readelf
-                STRIP=llvm-strip
                 CROSS_COMPILE=aarch64-linux-gnu-
                 CROSS_COMPILE_ARM32=arm-linux-gnueabi-
             )
