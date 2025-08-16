@@ -133,7 +133,7 @@ kernelsu() {
              for ksu_patch in \
                  dump/KernelSU/kernel-add-TheWildJames-Fork-Manager.patch
              do
-                 if patch -d KernelSU -p1 < "$ksu_patch"; then
+                 if patch -d KernelSU-Next -p1 < "$ksu_patch"; then
                       msg "apply patch success for $ksu_patch"
                  else
                       err "apply patch failed for $ksu_patch"
