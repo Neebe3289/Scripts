@@ -142,7 +142,6 @@ kernelsu() {
              done
              for kpatch in \
                  dump/kernel_patches/cred-add-get-cred-rcu.patch \
-                 dump/kernel_patches/fs-path_umount.patch \
                  dump/kernel_patches/maccess-rename-strncpy_from_unsafe_user-to-strncpy_from_user_nofault.patch \
                  dump/kernel_patches/integrate_scope-minimized_manual_hooks.patch \
                  dump/kernel_patches/BACKPORT-seccomp-add-filter_count-field.patch \
