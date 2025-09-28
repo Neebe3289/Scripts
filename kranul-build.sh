@@ -41,11 +41,11 @@ DEVICE_DEFCONFIG="begonia_user_defconfig"
 KERNEL_NAME="perf-Kernel"
 KERNEL_VER="$(make kernelversion)"
 KERNEL_IMG="${MAIN_DIR}/out/arch/arm64/boot/Image.gz-dtb"
-KERNEL_LOG="${MAIN_DIR}/out/buildlog-$(date +'%H%M').txt"
+BUILD_LOG="${MAIN_DIR}/out/buildlog.txt"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 COMMIT_HASH="$(git log --pretty=format:'%h' -1)"
 CORES="$(nproc --all)"
-WITH_KSU="0" # '0' | '1'
+WITH_KSU="true" # 'false' | 'true'
 TOOLCHAIN="aosp" # 'aosp' | 'zyc'
 
 # Clone function.
@@ -126,12 +126,13 @@ tg_msg() {
 
 # Function for KernelSU.
 kernelsu() {
-       if [[ "${WITH_KSU}" == "1" ]]; then
+       if [[ "${WITH_KSU}" == "true" ]]; then
              msg "|| Do make kernelsu functional ||"
              cd "${MAIN_DIR}"
              curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/next/kernel/setup.sh" | bash -s next
              for ksu_patch in \
-                 dump/KernelSU/kernel-add-TheWildJames-Fork-Manager.patch
+                 dump/KSUN/0001-kernel-Implement-SuSFS-1.5.10.patch \
+                 dump/KSUN/kernel-add-TheWildJames-Fork-Manager.patch
              do
                  if patch -d KernelSU-Next -p1 < "$ksu_patch"; then
                       msg "apply patch success for $ksu_patch"
@@ -141,11 +142,12 @@ kernelsu() {
                  fi
              done
              for kpatch in \
-                 dump/kernel_patches/cred-add-get-cred-rcu.patch \
-                 dump/kernel_patches/maccess-rename-strncpy_from_unsafe_user-to-strncpy_from_user_nofault.patch \
+                 dump/kernel_patches/0001-kernel-susfs-v.1.5.10.patch \
                  dump/kernel_patches/integrate_scope-minimized_manual_hooks.patch \
-                 dump/kernel_patches/BACKPORT-seccomp-add-filter_count-field.patch \
-                 dump/kernel_patches/0001-ptrace.patch
+                 dump/kernel_patches/maccess-rename-strncpy_from_unsafe_user-to-strncpy_from_user_nofault.patch \
+                 dump/kernel_patches/cred-add-get-cred-rcu.patch \
+                 dump/kernel_patches/0001-ptrace.patch \
+                 dump/kernel_patches/BACKPORT-seccomp-add-filter_count-field.patch
              do
                  if patch -p1 < "$kpatch"; then
                       msg "apply patch success for $kpatch"
@@ -154,10 +156,30 @@ kernelsu() {
                       exit 1
                  fi
              done
+             # Add to config
              echo "CONFIG_KSU=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KSU_DEBUG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KSU_KPROBES_HOOK=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_LSM_SECURITY_HOOKS=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KPROBES=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_HAVE_KPROBES=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KPROBE_EVENTS=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
+             echo "CONFIG_KPROBE_EVENT=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_TMPFS_XATTR=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
        fi
 }
@@ -194,7 +216,7 @@ compile() {
 
        mkdir -p out
        make O=out "${DEVICE_DEFCONFIG}"
-       make -j"${CORES}" O=out "${MAKE[@]}" 2>&1 | tee "${KERNEL_LOG}"
+       make -j"${CORES}" O=out "${MAKE[@]}" 2>&1 | tee "${BUILD_LOG}"
 
        BUILD_END="$(date +'%s')"
        TOTAL_TIME="$((BUILD_END - BUILD_START))"
@@ -206,7 +228,7 @@ compile() {
              # Zipping
              cp "${KERNEL_IMG}" AK3
              cd AK3 || exit 1
-             if [[ "${WITH_KSU}" == "1" ]]; then
+             if [[ "${WITH_KSU}" == "true" ]]; then
                    sed -i "s/kernel.string=.*/kernel.string=${KERNEL_NAME}-KSU-${COMMIT_HASH} by ${KBUILD_BUILD_USER} @ github/g" anykernel.sh
                    ZIPNAME="${KERNEL_NAME}-KSU-${DEVICE_CODENAME}-${COMMIT_HASH}-${DATE}.zip"
              else
@@ -217,7 +239,7 @@ compile() {
              send_file "${ZIPNAME}" "✅ Build took : $((TOTAL_TIME / 60)) minute(s) and $((TOTAL_TIME % 60)) second(s) for ${DEVICE_CODENAME} | MD5 : <code>$(md5sum "${ZIPNAME}" | cut -d' ' -f1)</code>"
        else
              err "|| Build failed to compile! ||"
-             send_file "${KERNEL_LOG}" "❌ Build failed to compile, Please check log to fix it!"
+             send_file "${BUILD_LOG}" "❌ Build failed to compile, Please check log to fix it!"
              exit 1
        fi
 }

@@ -13,8 +13,6 @@ on:
         default: 'vic-personal'
 
 env:
-  DEVICE: Redmi_Note8_Pro
-  KERNEL_NAME: perf
   TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
   TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
   TZ: "Asia/Jakarta"
@@ -60,8 +58,11 @@ jobs:
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: build-kernel-${{ env.DEVICE }}-${{ env.KERNEL_NAME }}
           max-size: 2G
+          key: kernel-build-begonia-${{ github.event.inputs.KERNEL_BRANCH }}
+          restore-keys: |
+            kernel-build-begonia-${{ github.event.inputs.KERNEL_BRANCH }}
+            kernel-
 
       - name: Run Build Script
         run: |
