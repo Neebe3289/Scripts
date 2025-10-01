@@ -130,19 +130,7 @@ kernelsu() {
              msg "|| Do make kernelsu functional ||"
              cd "${MAIN_DIR}"
              curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/next/kernel/setup.sh" | bash -s next
-             for ksu_patch in \
-                 dump/KSUN/0001-kernel-Implement-SuSFS-1.5.10.patch \
-                 dump/KSUN/kernel-add-TheWildJames-Fork-Manager.patch
-             do
-                 if patch -d KernelSU-Next -p1 < "$ksu_patch"; then
-                      msg "apply patch success for $ksu_patch"
-                 else
-                      err "apply patch failed for $ksu_patch"
-                      exit 1
-                 fi
-             done
              for kpatch in \
-                 dump/kernel_patches/0001-kernel-susfs-v.1.5.10.patch \
                  dump/kernel_patches/integrate_scope-minimized_manual_hooks.patch \
                  dump/kernel_patches/maccess-rename-strncpy_from_unsafe_user-to-strncpy_from_user_nofault.patch \
                  dump/kernel_patches/cred-add-get-cred-rcu.patch \
@@ -161,21 +149,6 @@ kernelsu() {
              echo "CONFIG_KSU_DEBUG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KSU_KPROBES_HOOK=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KSU_LSM_SECURITY_HOOKS=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> arch/arm64/configs/$DEVICE_DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KPROBES=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_HAVE_KPROBES=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
              echo "CONFIG_KPROBE_EVENTS=n" >> arch/arm64/configs/$DEVICE_DEFCONFIG
